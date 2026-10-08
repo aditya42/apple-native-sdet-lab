@@ -1,0 +1,32 @@
+name: Nightly Reliability
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Reliability iterations
+        required: false
+        default: "25"
+  schedule:
+    - cron: "30 18 * * 1-5"
+
+permissions:
+  contents: read
+
+jobs:
+  reliability:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: make bootstrap
+      - name: Run reliability loop
+        env:
+          RUNS: ${{ github.event.inputs.runs || '25' }}
+        run: ./scripts/run-reliability.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reliability-results
+          path: reports/reliability/

@@ -1,0 +1,44 @@
+name: PR Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  domain-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift package tests
+        run: make domain-test
+
+  ios-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: make bootstrap
+      - name: Start mock HTTP service
+        run: |
+          ./scripts/start-mock-server.sh > /tmp/contactlab-mock.log 2>&1 &
+          echo $! > /tmp/contactlab-mock.pid
+          for i in {1..20}; do curl -fsS http://127.0.0.1:8080/health && break; sleep 1; done
+      - name: Run XCTest and XCUITest
+        run: ./scripts/run-tests.sh
+      - name: Build report
+        if: always()
+        run: |
+          if [ -d reports/ContactLab.xcresult ]; then ./scripts/report.sh reports/ContactLab.xcresult; fi
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contactlab-test-artifacts
+          path: reports/
+          if-no-files-found: ignore
