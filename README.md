@@ -205,12 +205,6 @@ The UI tests rely on these identifiers instead of localized labels whenever poss
 - Add statistical flaky-test scoring from historical runs.
 - Add test-plan sharding across simulator models/OS versions.
 
-## Resume-ready framing
-
-**Apple Native SDET Lab — Swift, XCTest, XCUITest, CoreData, GitHub Actions**
-
-Architected a native iOS quality engineering platform covering UI, networking, persistence, lifecycle, accessibility, performance and resilience validation. Built deterministic HTTP fault injection, testability hooks, reliability-loop execution, diagnostic artifact capture and `.xcresult` analysis to distinguish product, test and infrastructure failures.
-
 ## License
 
 MIT
