@@ -36,6 +36,8 @@ class ReportingTests(unittest.TestCase):
         self.assertEqual(parser.parse_duration("0.021s"), 0.021)
         self.assertEqual(parser.parse_duration("250ms"), 0.25)
         self.assertEqual(parser.parse_duration("1.5m"), 90.0)
+        self.assertEqual(parser.parse_duration("1m 11s"), 71.0)
+        self.assertEqual(parser.parse_duration("1h 2m 3.5s"), 3723.5)
         self.assertEqual(parser.parse_duration(2.0), 2.0)
         self.assertIsNone(parser.parse_duration(None))
         with self.assertRaises(ValueError):
