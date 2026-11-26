@@ -194,16 +194,31 @@ The UI tests rely on these identifiers instead of localized labels whenever poss
 - Per-run `.xcresult` bundles
 - Pass-rate CSV
 
-## Suggested next increments
+## Next increments: implementation status
 
-- Add deterministic retry-then-success network scenarios.
-- Add explicit offline-mode injection via custom `URLProtocol`/network abstraction.
-- Add locale matrix (`en_US`, `de_DE`, `ja_JP`) and RTL validation.
-- Add VoiceOver-oriented accessibility assertions.
-- Add regression thresholds for launch/search performance.
-- Add failure-history persistence with SQLite.
-- Add statistical flaky-test scoring from historical runs.
-- Add test-plan sharding across simulator models/OS versions.
+The eight previously proposed increments have been implemented on the feature branch. See [docs/next-increments.md](docs/next-increments.md) for validation commands and scope notes.
+
+- [x] Deterministic HTTP 503, 503, success scenario and bounded client retries.
+- [x] Offline transport injection with `URLProtocol`, guarded by UI-test launch flags.
+- [x] Locale matrix (`en_US`, `de_DE`, `ja_JP`) and Arabic RTL control assertions.
+- [x] VoiceOver-oriented semantic-label, identifier and hittability assertions.
+- [x] Configurable test-duration thresholds for launch and search.
+- [x] SQLite persistence of test outcomes with deduplicated run identifiers.
+- [x] Historical failure/transition rates and heuristic flaky-test scores.
+- [x] Unit/UI test sharding and multiple iPhone simulator targets in PR CI.
+
+**Validation status:** The native Swift/XCUITest changes require an Xcode/macOS CI run; repository changes alone do not prove the build passes. VoiceOver checks do not verify spoken audio. Performance budgets start as broad test-duration guardrails, not statistically calibrated launch/search metric baselines. SQLite history is per-run unless persisted and restored across workflow runs.
+
+### New commands
+
+```bash
+python3 -m unittest discover -s Tools/tests -v
+TEST_LOCALE=de_DE make test
+TEST_LOCALE=ja_JP make test
+make report
+python3 Tools/failure-history/history.py --db reports/history.sqlite
+python3 Tools/performance/check_thresholds.py reports/classified.json
+```
 
 ## License
 
