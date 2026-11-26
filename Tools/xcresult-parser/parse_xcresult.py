@@ -28,6 +28,9 @@ def parse_duration(value: object) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
     raw = str(value).strip()
+    # Older fixtures and some xcresult schemas contain numeric strings in seconds.
+    if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", raw):
+        return float(raw)
     # xcresulttool emits compact or composite duration strings.
     parts = list(re.finditer(r"([0-9]+(?:\.[0-9]+)?)\s*(ms|h|m|s)", raw))
     if not parts or re.sub(r"[0-9]+(?:\.[0-9]+)?\s*(?:ms|h|m|s)", "", raw).strip():
