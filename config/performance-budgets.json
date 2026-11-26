@@ -1,0 +1,8 @@
+{
+  "LaunchPerformanceTests/testColdLaunchPerformance": {
+    "maxDurationSeconds": 30.0
+  },
+  "ContactSearchPerformanceTests/testSearchTenThousandContactsPerformance": {
+    "maxDurationSeconds": 30.0
+  }
+}
