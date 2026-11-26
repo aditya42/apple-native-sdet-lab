@@ -29,6 +29,8 @@ def normalized_tests(tree: dict, failures: list[dict]) -> list[dict]:
     for node in children(tree):
         identifier = str(node.get("nodeIdentifier") or node.get("name") or "")
         node_type = str(node.get("nodeType") or "").lower()
+        if node_type == "test plan":
+            continue
         result = str(node.get("result") or "").lower()
         if not identifier or not (node_type in {"test case", "testcase", "test"} or
                                   (result and "test" in node_type)):
