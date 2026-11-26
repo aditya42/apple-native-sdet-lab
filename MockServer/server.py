@@ -3,17 +3,23 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 FIXTURES = ROOT / "fixtures"
-STATE = {"scenario": "normal"}
+STATE = {"scenario": "normal", "requests": 0}
+LOCK = threading.Lock()
+ALLOWED = {
+    "normal", "empty", "server_error", "service_unavailable", "slow_3s",
+    "timeout", "malformed_json", "retry_then_success",
+}
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "ContactLabMock/1.0"
+    server_version = "ContactLabMock/2.0"
 
     def _json(self, status: int, payload) -> None:
         body = json.dumps(payload).encode()
@@ -21,15 +27,26 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_GET(self):  # noqa: N802
         if self.path == "/health":
-            return self._json(200, {"status": "ok", "scenario": STATE["scenario"]})
+            with LOCK:
+                state = dict(STATE)
+            return self._json(200, {"status": "ok", **state})
         if self.path != "/contacts":
             return self._json(404, {"error": "not_found"})
 
-        scenario = STATE["scenario"]
+        with LOCK:
+            scenario = STATE["scenario"]
+            STATE["requests"] += 1
+            request_number = STATE["requests"]
+
+        if scenario == "retry_then_success" and request_number <= 2:
+            return self._json(503, {"error": "transient_error", "attempt": request_number})
         if scenario == "server_error":
             return self._json(500, {"error": "internal_server_error"})
         if scenario == "service_unavailable":
@@ -55,13 +72,17 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/test/scenario":
             return self._json(404, {"error": "not_found"})
         length = int(self.headers.get("Content-Length", "0"))
-        payload = json.loads(self.rfile.read(length) or b"{}")
+        try:
+            payload = json.loads(self.rfile.read(length) or b"{}")
+        except (ValueError, UnicodeDecodeError):
+            return self._json(400, {"error": "invalid_json"})
         scenario = payload.get("scenario", "normal")
-        allowed = {"normal", "empty", "server_error", "service_unavailable", "slow_3s", "timeout", "malformed_json"}
-        if scenario not in allowed:
-            return self._json(400, {"error": "unsupported_scenario", "allowed": sorted(allowed)})
-        STATE["scenario"] = scenario
-        return self._json(200, {"scenario": scenario})
+        if scenario not in ALLOWED:
+            return self._json(400, {"error": "unsupported_scenario", "allowed": sorted(ALLOWED)})
+        with LOCK:
+            STATE["scenario"] = scenario
+            STATE["requests"] = 0
+        return self._json(200, {"scenario": scenario, "requests": 0})
 
     def log_message(self, fmt, *args):
         print("[mock]", fmt % args)
