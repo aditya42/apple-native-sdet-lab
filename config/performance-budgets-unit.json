@@ -1,0 +1,5 @@
+{
+  "ContactSearchPerformanceTests/testSearchTenThousandContactsPerformance": {
+    "maxDurationSeconds": 30.0
+  }
+}
