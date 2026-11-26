@@ -1,0 +1,5 @@
+{
+  "LaunchPerformanceTests/testColdLaunchPerformance": {
+    "maxDurationSeconds": 150.0
+  }
+}

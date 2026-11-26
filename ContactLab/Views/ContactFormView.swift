@@ -27,13 +27,17 @@ struct ContactFormView: View {
         NavigationStack {
             Form {
                 TextField("First name", text: $firstName)
+                    .accessibilityLabel("First name")
                     .accessibilityIdentifier(AccessibilityID.ContactForm.firstName)
                 TextField("Last name", text: $lastName)
+                    .accessibilityLabel("Last name")
                     .accessibilityIdentifier(AccessibilityID.ContactForm.lastName)
                 TextField("Phone", text: $phone)
+                    .accessibilityLabel("Phone")
                     .keyboardType(.phonePad)
                     .accessibilityIdentifier(AccessibilityID.ContactForm.phone)
                 TextField("Email", text: $email)
+                    .accessibilityLabel("Email")
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
                     .accessibilityIdentifier(AccessibilityID.ContactForm.email)
