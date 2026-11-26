@@ -22,17 +22,18 @@ def children(node: dict):
 
 
 def parse_duration(value: object) -> float | None:
-    """Convert xcresult durations such as 0.021s, 250ms, and 1.5m to seconds."""
+    """Parse xcresult durations, including '0.021s', '250ms', and '1m 11s'."""
     if value is None or value == "":
         return None
     if isinstance(value, (int, float)):
         return float(value)
     raw = str(value).strip()
-    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)\s*(ms|s|m)?", raw)
-    if not match:
+    # xcresulttool emits compact or composite duration strings.
+    parts = list(re.finditer(r"([0-9]+(?:\.[0-9]+)?)\s*(ms|h|m|s)", raw))
+    if not parts or re.sub(r"[0-9]+(?:\.[0-9]+)?\s*(?:ms|h|m|s)", "", raw).strip():
         raise ValueError(f"Unsupported xcresult duration: {value!r}")
-    number = float(match.group(1))
-    return number * {"ms": .001, "s": 1., "m": 60., None: 1.}[match.group(2)]
+    factors = {"ms": 0.001, "s": 1.0, "m": 60.0, "h": 3600.0}
+    return sum(float(part.group(1)) * factors[part.group(2)] for part in parts)
 
 
 def normalized_tests(tree: dict, failures: list[dict]) -> list[dict]:
