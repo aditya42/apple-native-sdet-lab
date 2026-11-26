@@ -1,51 +1,42 @@
 #!/usr/bin/env python3
-"""Enforce absolute XCTest performance budgets from normalized xcresult data."""
+"""Enforce whole-test runtime guardrails using normalized xcresult results."""
 from __future__ import annotations
-
 import argparse
 import json
 import sys
 from pathlib import Path
 
-
-def evaluate(data: dict, budgets: dict) -> tuple[list[str], int]:
-    problems = []
+def evaluate(data: dict, budgets: dict):
+    issues = []
     checked = 0
-    for test_name, rule in budgets.items():
-        matches = [t for t in data.get("tests", []) if test_name in str(t.get("test", ""))]
+    for name, rule in budgets.items():
+        matches = [item for item in data.get("tests", []) if name in item.get("test", "")]
         if not matches:
-            problems.append(f"MISSING: {test_name} (cannot assert performance budget)")
-            continue
-        for result in matches:
-            if result.get("status") != "passed":
-                problems.append(f"FAILED: {test_name} ({result.get('status')})")
-                continue
-            duration = result.get("duration")
-            if duration is None:
-                problems.append(f"MISSING_DURATION: {test_name}")
-                continue
-            checked += 1
-            if float(duration) > float(rule["maxDurationSeconds"]):
-                problems.append(
-                    f"SLOW: {test_name} {duration}s > {rule['maxDurationSeconds']}s"
-                )
-    return problems, checked
+            issues.append(f"MISSING: {name}")
+        for item in matches:
+            if item.get("status") != "passed":
+                issues.append(f"FAILED: {name}: {item.get('status')}")
+            elif item.get("duration") is None:
+                issues.append(f"MISSING_DURATION: {name}")
+            else:
+                checked += 1
+                if float(item["duration"]) > float(rule["maxDurationSeconds"]):
+                    issues.append(f"SLOW: {name} exceeded {rule['maxDurationSeconds']}s")
+    return issues, checked
 
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("results")
-    parser.add_argument("--budgets", default="config/performance-budgets.json")
-    args = parser.parse_args()
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("results")
+    p.add_argument("--budgets", default="config/performance-budgets.json")
+    args = p.parse_args()
     data = json.loads(Path(args.results).read_text())
     budgets = json.loads(Path(args.budgets).read_text())
     issues, checked = evaluate(data, budgets)
     for issue in issues:
         print(issue)
-    print(f"Performance gate: {checked} assertions checked, {len(issues)} violations")
+    print(f"Performance guardrail: {checked} checks, {len(issues)} violations")
     if issues:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
