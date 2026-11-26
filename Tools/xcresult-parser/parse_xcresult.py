@@ -28,7 +28,7 @@ def parse_duration(value: object) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
     raw = str(value).strip()
-    match = re.fullmatch(r"([0-9]+(?:\\.[0-9]+)?)\\s*(ms|s|m)?", raw)
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)\s*(ms|s|m)?", raw)
     if not match:
         raise ValueError(f"Unsupported xcresult duration: {value!r}")
     number = float(match.group(1))
