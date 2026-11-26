@@ -32,6 +32,15 @@ class ReportingTests(unittest.TestCase):
                 self.assertEqual(result[0]["samples"], 5)
                 self.assertEqual(result[0]["classification"], "FLAKY")
 
+    def test_xcresult_duration_units(self):
+        self.assertEqual(parser.parse_duration("0.021s"), 0.021)
+        self.assertEqual(parser.parse_duration("250ms"), 0.25)
+        self.assertEqual(parser.parse_duration("1.5m"), 90.0)
+        self.assertEqual(parser.parse_duration(2.0), 2.0)
+        self.assertIsNone(parser.parse_duration(None))
+        with self.assertRaises(ValueError):
+            parser.parse_duration("invalid")
+
     def test_parser_recurses_modern_xcresult_children(self):
         tree = {"testNodes": [{"nodeType": "Test Plan", "nodeIdentifier": "ContactLab",
                  "result": "Passed", "children": [
@@ -39,7 +48,7 @@ class ReportingTests(unittest.TestCase):
              "children": [
                 {"nodeType": "Test Case", "nodeIdentifier":
                  "ContactLabTests/ContactSearchPerformanceTests/testSearchTenThousandContactsPerformance()",
-                 "result": "Passed", "duration": "7.832"},
+                 "result": "Passed", "duration": "7.832s"},
                 {"nodeType": "Test Case", "nodeIdentifier": "Suite/testB",
                  "result": "Failed", "duration": "0.3"},
              ]}
