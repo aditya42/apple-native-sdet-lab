@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,20 @@ def children(node: dict):
         if isinstance(child, dict):
             yield child
             yield from children(child)
+
+
+def parse_duration(value: object) -> float | None:
+    """Convert xcresult durations such as 0.021s, 250ms, and 1.5m to seconds."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw = str(value).strip()
+    match = re.fullmatch(r"([0-9]+(?:\\.[0-9]+)?)\\s*(ms|s|m)?", raw)
+    if not match:
+        raise ValueError(f"Unsupported xcresult duration: {value!r}")
+    number = float(match.group(1))
+    return number * {"ms": .001, "s": 1., "m": 60., None: 1.}[match.group(2)]
 
 
 def normalized_tests(tree: dict, failures: list[dict]) -> list[dict]:
@@ -47,7 +62,7 @@ def normalized_tests(tree: dict, failures: list[dict]) -> list[dict]:
         results.append({
             "test": identifier,
             "status": status,
-            "duration": float(duration) if duration not in ("", None) else None,
+            "duration": parse_duration(duration),
             "failureMessage": message,
         })
     for name, message in failure_messages.items():
