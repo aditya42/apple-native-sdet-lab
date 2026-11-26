@@ -5,29 +5,25 @@ struct ContactFormScreen {
     let app: XCUIApplication
 
     func create(firstName: String, lastName: String, phone: String, email: String) {
-        let first = app.textFields["contact.form.firstName"]
-        XCTAssertTrue(first.waitForExistence(timeout: 2))
-        enter(firstName, into: first)
-
-        let last = app.textFields["contact.form.lastName"]
-        enter(lastName, into: last)
-
-        let phoneField = app.textFields["contact.form.phone"]
-        enter(phone, into: phoneField)
-
-        let emailField = app.textFields["contact.form.email"]
-        enter(email, into: emailField)
-
+        enter(firstName, into: app.textFields["contact.form.firstName"])
+        enter(lastName, into: app.textFields["contact.form.lastName"])
+        enter(phone, into: app.textFields["contact.form.phone"])
+        enter(email, into: app.textFields["contact.form.email"])
         app.buttons["contact.save"].tap()
     }
 
     private func enter(_ value: String, into field: XCUIElement) {
-        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(field.waitForExistence(timeout: 10),
+                      "Missing contact form field: \(field.identifier)")
+        XCTAssertTrue(field.isHittable, "Field is not hittable: \(field.identifier)")
         field.tap()
-        if !field.hasKeyboardFocus {
+        // Wait for the iOS keyboard before sending keystrokes on slower CI simulators.
+        let keyboard = app.keyboards.firstMatch
+        if !keyboard.waitForExistence(timeout: 5) {
             field.tap()
+            XCTAssertTrue(keyboard.waitForExistence(timeout: 5),
+                          "Keyboard did not appear for: \(field.identifier)")
         }
-        XCTAssertTrue(field.hasKeyboardFocus, "Text field did not gain keyboard focus: \(field.identifier)")
         field.typeText(value)
     }
 }
