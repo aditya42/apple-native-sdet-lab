@@ -15,30 +15,57 @@ jobs:
       - uses: actions/checkout@v4
       - name: Swift package tests
         run: make domain-test
+      - name: Python validation
+        run: python3 -m unittest discover -s Tools/tests -v
 
   ios-tests:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [unit, ui]
+        device: ["iPhone 16", "iPhone 16 Pro"]
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
         run: make bootstrap
+      - name: Resolve simulator
+        run: |
+          xcrun simctl list devices available
+          UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys,os; d=json.load(sys.stdin)["devices"]; name=os.environ["DEVICE"]; matches=[v["udid"] for a in d.values() for v in a if v["name"]==name and v.get("isAvailable",False)]; print(matches[0] if matches else "")')
+          if [ -z "$UDID" ]; then echo "Simulator not available: $DEVICE"; exit 1; fi
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+        env:
+          DEVICE: ${{ matrix.device }}
       - name: Start mock HTTP service
         run: |
           ./scripts/start-mock-server.sh > /tmp/contactlab-mock.log 2>&1 &
-          echo $! > /tmp/contactlab-mock.pid
-          for i in {1..20}; do curl -fsS http://127.0.0.1:8080/health && break; sleep 1; done
-      - name: Run XCTest and XCUITest
-        run: ./scripts/run-tests.sh
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8080/health; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/health
+      - name: XCTest shard
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: bash ./scripts/run-shard.sh
       - name: Build report
         if: always()
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
-          if [ -d reports/ContactLab.xcresult ]; then ./scripts/report.sh reports/ContactLab.xcresult; fi
+          if [ -d "reports/shard-$SHARD.xcresult" ]; then
+            ./scripts/report.sh "reports/shard-$SHARD.xcresult"
+          fi
+      - name: Performance gate
+        if: matrix.shard == 'unit'
+        run: python3 Tools/performance/check_thresholds.py reports/classified.json --budgets config/performance-budgets-unit.json
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: contactlab-test-artifacts
+          name: contactlab-${{ matrix.shard }}-${{ matrix.device }}
           path: reports/
           if-no-files-found: ignore
