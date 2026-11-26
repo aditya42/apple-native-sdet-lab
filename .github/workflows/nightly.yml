@@ -24,9 +24,16 @@ jobs:
       - name: Run reliability loop
         env:
           RUNS: ${{ github.event.inputs.runs || '25' }}
-        run: ./scripts/run-reliability.sh
+        run: bash ./scripts/run-reliability.sh
+      - name: Persist reliability observations
+        if: always()
+        run: |
+          if [ -f reports/reliability/summary.csv ]; then
+            python3 Tools/failure-history/import_reliability.py reports/reliability/summary.csv --db reports/history.sqlite
+            python3 Tools/failure-history/history.py --db reports/history.sqlite --output reports/flaky-scores.json
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: reliability-results
-          path: reports/reliability/
+          path: reports/
